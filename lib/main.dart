@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/item.dart';
 
 void main() {
@@ -12,7 +15,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.red,
       ),
       home: HomePage(),
     );
@@ -42,11 +45,36 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       widget.items.add(Item(title: newTaskCtrl.text, done: false));
       newTaskCtrl.clear();
+      save();
     });
   }
 
+  save() async {
+    var prefs = await SharedPreferences.getInstance();
+    await prefs.setString('data', jsonEncode(widget.items));
+  }
+
   void remove(int index) {
-    widget.items.removeAt(index);
+    setState(() {
+      widget.items.removeAt(index);
+      save();
+    });
+  }
+
+  Future loadData() async {
+    var prefs = await SharedPreferences.getInstance();
+    var data = prefs.getString('data');
+    if (data != null) {
+      Iterable decoded = jsonDecode(data);
+      List<Item> result = decoded.map((x) => Item.fromJson(x)).toList();
+      setState(() {
+        widget.items = result;
+      });
+    }
+  }
+
+  _HomePageState() {
+    loadData();
   }
 
   @override
@@ -78,6 +106,7 @@ class _HomePageState extends State<HomePage> {
                 onChanged: (value) {
                   setState(() {
                     item.done = value!;
+                    save();
                   });
 
                   print(value);
@@ -88,8 +117,7 @@ class _HomePageState extends State<HomePage> {
                 color: Colors.red.withOpacity(0.2),
               ),
               onDismissed: (direction) {
-                remove;
-                print(direction);
+                remove(index);
               },
             );
             // return
